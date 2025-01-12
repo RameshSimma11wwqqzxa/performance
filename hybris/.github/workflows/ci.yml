@@ -25,7 +25,7 @@ jobs:
         run: |
           # Install any dependencies, setup Hybris environment (if necessary)
           # This might include setting up a Hybris server, importing data, etc.
-          ./hybrisserver.sh start  # or any other specific commands for your setup
+          ./hybrisserver.bat  # or any other specific commands for your setup
 
     - name: Run Performance Tests
         run: |
@@ -38,4 +38,4 @@ jobs:
       with:
         name: performance-test-results
         path: |
-          C:/trails/CXCOMCL221100U_29-70007431/hybris/log
+          C:/trails/CXCOMCL221100U_29-70007431/hybris/log/results.jtl
