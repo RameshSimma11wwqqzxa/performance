@@ -1,0 +1,41 @@
+name: Performance Testing with @PerformanceTest
+
+on:
+  push:
+    branches:
+      - main  # Trigger on push to the main branch, adjust as needed
+  pull_request:
+    branches:
+      - main  # Trigger on pull requests to the main branch
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest  # Use the latest Ubuntu runner
+
+    steps:
+    - name: Checkout the code
+      uses: actions/checkout@v2  # Checkout the repository to the runner
+
+    - name: Set up JDK
+      uses: actions/setup-java@v2
+      with:
+        java-version: '17'  # Ensure you use an appropriate JDK version for JMeter (Java 8+)
+
+    - name: Set up Hybris
+        run: |
+          # Install any dependencies, setup Hybris environment (if necessary)
+          # This might include setting up a Hybris server, importing data, etc.
+          ./hybrisserver.sh start  # or any other specific commands for your setup
+
+    - name: Run Performance Tests
+        run: |
+          # Run the performance tests using your Hybris testing framework (JUnit, etc.)
+          ant unittests -Dtestclasses.packages="org.training.*" -Dtestclasses.annotations="performancetest"
+          # Or any other command that executes your performance tests
+
+    - name: Upload JMeter Results 
+      uses: actions/upload-artifact@v2
+      with:
+        name: performance-test-results
+        path: |
+          C:/trails/CXCOMCL221100U_29-70007431/hybris/log
