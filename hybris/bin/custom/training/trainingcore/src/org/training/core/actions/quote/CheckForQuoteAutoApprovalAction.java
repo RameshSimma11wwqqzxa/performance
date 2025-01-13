@@ -35,7 +35,7 @@ public class CheckForQuoteAutoApprovalAction extends AbstractSimpleDecisionActio
 
 		if (LOG.isDebugEnabled())
 		{
-			LOG.debug(String.format("In asdsd CheckForQuoteAutoApprovalAction for process code : [%s]", process.getCode()));
+			LOG.debug(String.format("In this CheckForQuoteAutoApprovalAction for process code : [%s]", process.getCode()));
 		}
 
 		final QuoteModel quoteModel = getQuoteService().getCurrentQuoteForCode(process.getQuoteCode());
