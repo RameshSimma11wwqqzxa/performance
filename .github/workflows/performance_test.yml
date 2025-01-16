@@ -1,0 +1,38 @@
+name: CI CD pipeline
+on: 
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+ 
+jobs:
+  code-compile-and-checks:
+        runs-on: ubuntu-latest
+        env:
+            BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        
+        steps:
+        - name: JUnite Test Report
+          uses: dorny/test-reporter@v1
+          if: always()
+          with:
+             name: JUnit Tests
+             path: path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+             reporter: java-junit
+             fail-on-error: false
+
+        - name: Set Job Status
+          id: set_status
+          if: always()  # Ensure this step always runs
+          run: |
+            if [ "${{ job.status }}" == "success" ]; then
+              echo "Job succeeded"
+              echo "::set-output name=job_status::SUCCESS"
+            else
+              echo "Job failed"
+              echo "::set-output name=job_status::FAIL"
+            fi
+          shell: bash
