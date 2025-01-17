@@ -79,10 +79,8 @@ jobs:
              from: ramesh.kumar.simma@accenture.com
              attachments: ${{ github.workspace }}/hybris/bin/custom/response.xml
              body: |
-             Performance test for your code changes is failed, please check in the github actions for more details.
-             ${{ env.test_case_status }}
+             Performance test for your code changes is failed, please check in the github actions for more details.         
              
-                      
         - name: JUnite Test Report
           uses: dorny/test-reporter@v1
           with:
