@@ -78,9 +78,7 @@ jobs:
              cc: ramesh.kumar.simma@accenture.com
              from: ramesh.kumar.simma@accenture.com
              attachments: ${{ github.workspace }}/hybris/bin/custom/response.xml
-             body: |
-             ${{ env.test_case_status }}
-             
+             body: |            
                       
         - name: JUnite Test Report
           uses: dorny/test-reporter@v1
