@@ -61,6 +61,7 @@ jobs:
                 echo "Test case '$test_name' took ${test_duration} seconds, which is more than the 20-second limit."
                 echo "test_duration=false" >> $GITHUB_ENV
               fi
+              exit 1
             done
             echo "Test Status: $test_duration"
             echo "TEST_DURATION=$test_duration" >> $GITHUB_ENV
