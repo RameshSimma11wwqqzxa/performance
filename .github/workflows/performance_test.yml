@@ -6,24 +6,68 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
+  actions: write
+  issues: write
+  checks: write
  
 jobs:
-  code-compile-and-checks:
-        runs-on: ubuntu-latest
+  upload-performance-report:
+        runs-on: ubuntu-24.04
         env:
             BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         
         steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+          with:
+              ref: ${{ env.BRANCH_NAME }}  # Ensure you are checking out the correct branch
+              clean: true
+        - name: Upload test results
+          uses: actions/upload-artifact@v4
+          with:
+             name: junit-test-results
+             path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+             
+  visualize-performance-report:
+        runs-on: ubuntu-24.04
+        needs: upload-performance-report 
+        steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+          with:
+              ref: ${{ env.BRANCH_NAME }}  # Ensure you are checking out the correct branch
+              clean: true
+        - name: Download JUnit XML artifact
+          uses: actions/download-artifact@v4
+          with:
+             name: junit-test-results
+
+        - name: Install xmlstarlet
+          run: sudo apt-get update && sudo apt-get install -y xmlstarlet
+          
+        - name: Fail test case if duration > 20 sec
+          run: |
+            #!/bin/bash
+            # Parse the JUnit XML and check each test case duration
+            xmlstarlet sel -t -m "//testsuite/testcase" -v "@name" -o " took " -v "@time" -n ${{ github.workspace }}/hybris/bin/custom/response.xml | while read line; do
+              test_name=$(echo $line | cut -d' ' -f1)
+              test_duration=$(echo $line | cut -d' ' -f3)
+              # Check if any test took more than 20 seconds
+              if (( $(echo "$test_duration > 20" | bc -l) )); then
+                echo "Test case '$test_name' took ${test_duration} seconds, which is more than the 20-second limit."
+                exit 1
+              fi
+            done
+                      
         - name: JUnite Test Report
           uses: dorny/test-reporter@v1
-          if: always()
           with:
-             name: JUnit Tests
-             path: path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+             name: junit-test-results
+             path: ${{ github.workspace }}/hybris/bin/custom/response.xml
              reporter: java-junit
              fail-on-error: false
-
+             
         - name: Set Job Status
           id: set_status
           if: always()  # Ensure this step always runs
