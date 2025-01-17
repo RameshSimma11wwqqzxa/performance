@@ -75,7 +75,8 @@ jobs:
              subject: "Test Failed and Took Longer Than 20 Seconds"
              to: ramesh.kumar.simma@accenture.com
              cc: ramesh.kumar.simma@accenture.com
-             from: ramesh.kumar.simma@accenture.com
+             from: rameshkumar.simma@gmail.com
+             password: Ramesh@Vedu@2024
              attachments: ${{ github.workspace }}/hybris/bin/custom/response.xml
              body: |            
                       
