@@ -31,6 +31,8 @@ jobs:
              
   visualize-performance-report:
         runs-on: ubuntu-24.04
+        outputs:
+            test_time: ${{ steps.test_case_status.outputs.test_duration }}
         needs: upload-performance-report 
         steps:
         - name: Checkout code
@@ -47,6 +49,7 @@ jobs:
           run: sudo apt-get update && sudo apt-get install -y xmlstarlet
           
         - name: Fail test case if duration > 20 sec
+          id: test_case_status
           run: |
             #!/bin/bash
             # Parse the JUnit XML and check each test case duration
@@ -57,8 +60,28 @@ jobs:
               if (( $(echo "$test_duration > 20" | bc -l) )); then
                 echo "Test case '$test_name' took ${test_duration} seconds, which is more than the 20-second limit."
                 exit 1
+                echo test_duration=false >> $GITHUB_ENV
               fi
             done
+            echo "Test Status: $test_duration"
+            echo "TEST_DURATION=$test_duration" >> $GITHUB_ENV
+        - name: Send email
+          if: env.test_duration == 'false'
+          uses: dawidd6/action-send-mail@v3
+          with:
+             server_address: smtp.gmail.com
+             server_port: 465
+             secure: false
+             ignore_cert: true
+             subject: "Performance test is failed"
+             to: ramesh.kumar.simma@accenture.com
+             cc: ramesh.kumar.simma@accenture.com
+             from: ramesh.kumar.simma@accenture.com
+             attachments: ${{ github.workspace }}/hybris/bin/custom/response.xml
+             body: |
+             Performance test for your code changes is failed, please check in the github actions for more details.
+             ${{ env.test_case_status }}
+             
                       
         - name: JUnite Test Report
           uses: dorny/test-reporter@v1
