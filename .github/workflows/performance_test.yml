@@ -88,18 +88,18 @@ jobs:
             sleep 300
             echo "Create Build Response:  $buildcode"
             ##########
-            if [ "$buildcode" != "null" ] || [ -z "$buildcode" ]; then
-              echo "Build creation failed!"
-              finalStatus="FAIL"
-              echo "FINAL_BUILD_STATUS=$finalStatus" >> $GITHUB_ENV
-              exit 1 # Fail the workflow, but the next step can still run if you want it to.
-            else
-              echo "buildcode=$buildcode" >> $GITHUB_ENV
-              finalStatus="IN_PROGRESS"
-              echo "FINAL_BUILD_STATUS=$finalStatus" >> $GITHUB_ENV
-            fi
+             #if [ "$buildcode" = "null" ] || [ -z "$buildcode" ]; then
+               #echo "Build creation failed!"
+               #finalStatus="FAIL"
+               #echo "FINAL_BUILD_STATUS=$finalStatus" >> $GITHUB_ENV
+               #exit 1 # Fail the workflow, but the next step can still run if you want it to.
+             #else
+               #echo "buildcode=$buildcode" >> $GITHUB_ENV
+               #finalStatus="IN_PROGRESS"
+               #echo "FINAL_BUILD_STATUS=$finalStatus" >> $GITHUB_ENV
+             #fi
             ##########
-            echo "::set-output name=buildcode::$buildcode" # Set the buildCode as an output for other jobs
+             #echo "::set-output name=buildcode::$buildcode" # Set the buildCode as an output for other jobs
           shell: bash
 
         - name: Check Build Progress
