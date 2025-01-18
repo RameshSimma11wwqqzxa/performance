@@ -83,7 +83,7 @@ jobs:
             ccv2_build_url="${{env.CCV2_BASE_URL}}/builds";
             payload='{"branch": "${{ env.BRANCH_NAME}}", "name": "'"${{ env.BUILD_NAME }}"'"}';
             echo "Payload :: $payload"
-            buildcode=$(curl --location --request POST "$ccv2_build_url" --header 'Content-Type: application/json' --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}" --data-raw "$payload" | jq '.code')
+            #buildcode=$(curl --location --request POST "$ccv2_build_url" --header 'Content-Type: application/json' --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}" --data-raw "$payload" | jq '.code')
             echo "buildcode=$buildcode" >> $GITHUB_ENV
             sleep 300
             echo "Create Build Response:  $buildcode"
