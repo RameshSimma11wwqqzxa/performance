@@ -202,8 +202,6 @@ jobs:
           shell: bash
   performance-test:
     runs-on: ubuntu-latest
-    needs: 
-      - Deploy-build-branch
     steps:
   
         - name: Install xmlstarlet
