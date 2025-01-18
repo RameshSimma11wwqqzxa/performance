@@ -31,8 +31,8 @@ jobs:
 
         - name: Build or compile code
           run: |
-              . ./setantenv.sh
-              ant all
+              #. ./setantenv.sh
+              #ant all
             
         ## if you have multiple build command update in above step or create separate step for each command ###
  
