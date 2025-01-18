@@ -206,3 +206,21 @@ jobs:
   
         - name: Install xmlstarlet
           run: sudo apt-get update && sudo apt-get install -y xmlstarlet
+    
+  - name: performance test validation
+    id: test_case_status
+    run: |
+      #!/bin/bash
+      # Parse the JUnit XML and check each test case duration
+      xmlstarlet sel -t -m "//testsuite/testcase" -v "@name" -o " took " -v "@time" -n ${{ github.workspace }}/hybris/bin/custom/response.xml | while read line; do
+        test_name=$(echo $line | cut -d' ' -f1)
+        test_duration=$(echo $line | cut -d' ' -f3)
+        # Check if any test took more than 20 seconds
+        if (( $(echo "$test_duration > 20" | bc -l) )); then
+          echo "Test case '$test_name' took ${test_duration} seconds, which is more than the 20-second limit."
+          exit 1
+          echo "test_duration=false" >> $GITHUB_ENV
+        fi
+      done
+      echo "Test Status: $test_duration"
+      echo "TEST_DURATION=$test_duration" >> $GITHUB_ENV
