@@ -137,9 +137,6 @@ jobs:
   
   Deploy-build-branch:
     runs-on: ubuntu-latest
-    needs: 
-      - code-compile-and-checks
-      - build-ccv2
     env:
         BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         BUILD_NAME: build.$(date +'%Y.%m.%d.%H.%M')
