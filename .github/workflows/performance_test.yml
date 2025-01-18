@@ -220,7 +220,7 @@ jobs:
             xmlstarlet sel -t -m "//testsuite/testcase" -v "@name" -o " took " -v "@time" -n ${{ github.workspace }}/hybris/bin/custom/response.xml | while read line; do
               test_name=$(echo $line | cut -d' ' -f1)
               test_duration=$(echo $line | cut -d' ' -f3)
-              # Check if any test took more than 20 seconds
+              # Check if any test took more than 20000 seconds
               if (( $(echo "$test_duration > 20" | bc -l) )); then
                 echo "Test case '$test_name' took ${test_duration} seconds, which is more than the 20-second limit."
                 exit 1
