@@ -128,11 +128,11 @@ jobs:
                  # echo "Build inProgress.. $percentage % completed" 
                   #sleep 120
                 #fi
-             #done
-             #echo "Final Build Status: $finalBuildStatus"
-             #echo "FINAL_BUILD_STATUS=$finalBuildStatus" >> $GITHUB_ENV
-             #echo "::set-output name=finalBuildStatus::$finalBuildStatus"
-             #echo "Build Completed"
+             done
+             echo "Final Build Status: $finalBuildStatus"
+             echo "FINAL_BUILD_STATUS=$finalBuildStatus" >> $GITHUB_ENV
+             echo "::set-output name=finalBuildStatus::$finalBuildStatus"
+             echo "Build Completed"
           shell: bash
   
   Deploy-build-branch:
