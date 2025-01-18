@@ -6,11 +6,14 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
+  actions: write
+  issues: write
+  checks: write
  
 jobs:
   code-compile-and-checks:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         env:
             BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         
@@ -205,11 +208,36 @@ jobs:
     needs: 
       - Deploy-build-branch
   steps:
-  - name: Run Unit Tests with Ant
+  
+  - name: Install xmlstarlet
+    run: sudo apt-get update && sudo apt-get install -y xmlstarlet
+    
+  - name: performance test validation
+    id: test_case_status
     run: |
-        # Run the `ant unittests` command with your specified parameters
-        curl -X GET http://localhost:9001/test/run/performance
-        #ant unittests -Dtestclasses.packages="org.training.*" -Dtestclasses.annotations="performancetest"
+      #!/bin/bash
+      # Parse the JUnit XML and check each test case duration
+      xmlstarlet sel -t -m "//testsuite/testcase" -v "@name" -o " took " -v "@time" -n ${{ github.workspace }}/hybris/bin/custom/response.xml | while read line; do
+        test_name=$(echo $line | cut -d' ' -f1)
+        test_duration=$(echo $line | cut -d' ' -f3)
+        # Check if any test took more than 20 seconds
+        if (( $(echo "$test_duration > 20" | bc -l) )); then
+          echo "Test case '$test_name' took ${test_duration} seconds, which is more than the 20-second limit."
+          exit 1
+          echo "test_duration=false" >> $GITHUB_ENV
+        fi
+      done
+      echo "Test Status: $test_duration"
+      echo "TEST_DURATION=$test_duration" >> $GITHUB_ENV
+      
+  - name: JUnite Test Report
+    uses: dorny/test-reporter@v1
+    with:
+       name: junit-test-results
+       path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+       reporter: java-junit
+       fail-on-error: false
+        
   - name: Upload test results
     uses: actions/upload-artifact@v2
     with:
