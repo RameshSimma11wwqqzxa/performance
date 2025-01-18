@@ -212,6 +212,6 @@ jobs:
         #ant unittests -Dtestclasses.packages="org.training.*" -Dtestclasses.annotations="performancetest"
   - name: Upload test results
     uses: actions/upload-artifact@v2
-      with:
+    with:
         name: junit-test-results
         path: ${{ github.workspace }}/hybris/log/junit/index.html  # Modify this path to match where your Ant test results are stored
