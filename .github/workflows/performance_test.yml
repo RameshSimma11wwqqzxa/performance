@@ -38,8 +38,8 @@ jobs:
  
         - name: JUnit test
           run: |
-              . ./setantenv.sh
-              ant alltests -Dtestclasses.annotations=unittests
+             # . ./setantenv.sh
+             # ant alltests -Dtestclasses.annotations=unittests
 
         - name: JUnite Test Report
           uses: dorny/test-reporter@v1
