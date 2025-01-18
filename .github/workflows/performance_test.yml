@@ -225,3 +225,11 @@ jobs:
             echo "Test Status: $test_duration"
             echo "TEST_DURATION=$test_duration" >> $GITHUB_ENV
       
+        - name: JUnite Test Report
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
+        
