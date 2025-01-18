@@ -46,7 +46,7 @@ jobs:
           if: always()
           with:
              name: JUnit Tests
-           #  path: ${{ github.workspace }}/hybris/log/junit/index.html
+             path: ${{ github.workspace }}/hybris/bin/custom/response.xml
              reporter: java-junit
              fail-on-error: false
 
