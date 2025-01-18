@@ -85,7 +85,7 @@ jobs:
             echo "Payload :: $payload"
             #buildcode=$(curl --location --request POST "$ccv2_build_url" --header 'Content-Type: application/json' --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}" --data-raw "$payload" | jq '.code')
             echo "buildcode=$buildcode" >> $GITHUB_ENV
-            sleep 300
+            #sleep 300
             echo "Create Build Response:  $buildcode"
             ##########
              #if [ "$buildcode" = "null" ] || [ -z "$buildcode" ]; then
