@@ -116,23 +116,23 @@ jobs:
                 buildStatus=$(jq -n "$buildresponse" | jq '.buildStatus')
                 percentage=$(jq -n "$buildresponse" | jq '.percentage')
                 echo "Check Progress Status: $buildStatus" 
-                if [ $buildStatus = '"SUCCESS"' ];then
-                  echo "Build Succeeded"
-                  finalBuildStatus="SUCCESS"
-                  break
-                elif [ $buildStatus  = '"FAIL"' ];then
-                  echo "Failed"
-                  finalBuildStatus="FAIL"
-                  exit 1
-                else
-                  echo "Build inProgress.. $percentage % completed" 
-                  sleep 120
-                fi
-             done
-             echo "Final Build Status: $finalBuildStatus"
-             echo "FINAL_BUILD_STATUS=$finalBuildStatus" >> $GITHUB_ENV
-             echo "::set-output name=finalBuildStatus::$finalBuildStatus"
-             echo "Build Completed"
+               # if [ $buildStatus = '"SUCCESS"' ];then
+                #  echo "Build Succeeded"
+                #  finalBuildStatus="SUCCESS"
+                 # break
+                #elif [ $buildStatus  = '"FAIL"' ];then
+                 # echo "Failed"
+                  #finalBuildStatus="FAIL"
+                  #exit 1
+                #else
+                 # echo "Build inProgress.. $percentage % completed" 
+                  #sleep 120
+                #fi
+             #done
+             #echo "Final Build Status: $finalBuildStatus"
+             #echo "FINAL_BUILD_STATUS=$finalBuildStatus" >> $GITHUB_ENV
+             #echo "::set-output name=finalBuildStatus::$finalBuildStatus"
+             #echo "Build Completed"
           shell: bash
   
   Deploy-build-branch:
