@@ -6,89 +6,47 @@ on:
 
 permissions:
   id-token: write
-  contents: write
-  actions: write
-  issues: write
-  checks: write
+  contents: read
  
 jobs:
-  upload-performance-report:
-        runs-on: ubuntu-24.04
+  code-compile-and-checks:
+        runs-on: ubuntu-latest
         env:
             BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         
         steps:
-        - name: Checkout code
-          uses: actions/checkout@v3
+        - uses: actions/setup-java@v4
           with:
-              ref: ${{ env.BRANCH_NAME }}  # Ensure you are checking out the correct branch
-              clean: true
-        - name: Upload test results
-          uses: actions/upload-artifact@v4
-          with:
-             name: junit-test-results
-             path: ${{ github.workspace }}/hybris/bin/custom/response.xml
-             
-  visualize-performance-report:
-        runs-on: ubuntu-24.04
-        outputs:
-            test_time: ${{ steps.test_case_status.outputs.test_duration }}
-        needs: upload-performance-report 
-        steps:
-        - name: Checkout code
-          uses: actions/checkout@v3
-          with:
-              ref: ${{ env.BRANCH_NAME }}  # Ensure you are checking out the correct branch
-              clean: true
-        - name: Download JUnit XML artifact
-          uses: actions/download-artifact@v4
-          with:
-             name: junit-test-results
+            distribution: 'sapmachine' # See 'Supported distributions' for available options
+            java-version: '17'
 
-        - name: Install xmlstarlet
-          run: sudo apt-get update && sudo apt-get install -y xmlstarlet
-          
-        - name: Fail test case if duration > 20 sec
-          id: test_case_status
-          run: |
-            #!/bin/bash
-            # Parse the JUnit XML and check each test case duration
-            xmlstarlet sel -t -m "//testsuite/testcase" -v "@name" -o " took " -v "@time" -n ${{ github.workspace }}/hybris/bin/custom/response.xml | while read line; do
-              test_name=$(echo $line | cut -d' ' -f1)
-              test_duration=$(echo $line | cut -d' ' -f3)
-              # Check if any test took more than 20 seconds
-              if (( $(echo "$test_duration > 20" | bc -l) )); then
-                echo "Test case '$test_name' took ${test_duration} seconds, which is more than the 20-second limit."
-                
-                echo "test_duration=false" >> $GITHUB_ENV
-              fi
-            done
-            echo "Test Status: $test_duration"
-            echo "TEST_DURATION=$test_duration" >> $GITHUB_ENV
-        - name: Send email
-          if: env.test_duration == 'false'
-          uses: dawidd6/action-send-mail@v3
+        - name: Checkout code
+          uses: actions/checkout@v3
           with:
-             server_address: smtp.gmail.com
-             server_port: 465
-             secure: true
-             ignore_cert: false
-             subject: "Test Failed and Took Longer Than 20 Seconds"
-             to: ramesh.kumar.simma@accenture.com
-             cc: ramesh.kumar.simma@accenture.com
-             from: rameshkumar.simma@gmail.com
-             password: Ramesh@Vedu@2024
-             attachments: ${{ github.workspace }}/hybris/bin/custom/response.xml
-             body: |            
-                      
+              ref: ${{ env.BRANCH_NAME }}  # Ensure you are checking out the correct branch
+              clean: true
+
+        - name: Build or compile code
+          run: |
+              . ./setantenv.sh
+              ant all
+            
+        ## if you have multiple build command update in above step or create separate step for each command ###
+ 
+        - name: JUnit test
+          run: |
+              . ./setantenv.sh
+              ant alltests -Dtestclasses.annotations=unittests
+
         - name: JUnite Test Report
           uses: dorny/test-reporter@v1
+          if: always()
           with:
-             name: junit-test-results
-             path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+             name: JUnit Tests
+             path: ${{ github.workspace }}/hybris/log/junit/index.html
              reporter: java-junit
              fail-on-error: false
-             
+
         - name: Set Job Status
           id: set_status
           if: always()  # Ensure this step always runs
@@ -101,3 +59,159 @@ jobs:
               echo "::set-output name=job_status::FAIL"
             fi
           shell: bash
+
+  build-ccv2:
+    runs-on: ubuntu-latest
+    env:
+        BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        BUILD_NAME: build_${{ github.run_number }}-$(date +'%Y.%m.%d.%H.%M') 
+        CCV2_URL: <Update your url>
+        ACCESS_TOKEN: <update your CCv2 portal login token from repository secrets>
+        SUB_CODE: <update your CCv2 portal subscription from repository secrets>
+        CCV2_BASE_URL: https://<URL>/v2/subscriptions/<SUB_CODE>
+
+    steps:
+        - name: Create Build
+          id: get_build_code
+          run: |
+            #!/bin/bash
+            echo "URL: ${{env.CCV2_BASE_URL}}"
+            echo "BUILD_NAME : ${{ env.BUILD_NAME }}"
+            ccv2_build_url="${{env.CCV2_BASE_URL}}/builds";
+            payload='{"branch": "${{ env.BRANCH_NAME}}", "name": "'"${{ env.BUILD_NAME }}"'"}';
+            echo "Payload :: $payload"
+            buildcode=$(curl --location --request POST "$ccv2_build_url" --header 'Content-Type: application/json' --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}" --data-raw "$payload" | jq '.code')
+            echo "buildcode=$buildcode" >> $GITHUB_ENV
+            sleep 300
+            echo "Create Build Response:  $buildcode"
+            ##########
+            if [ "$buildcode" == "null" ] || [ -z "$buildcode" ]; then
+              echo "Build creation failed!"
+              finalStatus="FAIL"
+              echo "FINAL_BUILD_STATUS=$finalStatus" >> $GITHUB_ENV
+              exit 1 # Fail the workflow, but the next step can still run if you want it to.
+            else
+              echo "buildcode=$buildcode" >> $GITHUB_ENV
+              finalStatus="IN_PROGRESS"
+              echo "FINAL_BUILD_STATUS=$finalStatus" >> $GITHUB_ENV
+            fi
+            ##########
+            echo "::set-output name=buildcode::$buildcode" # Set the buildCode as an output for other jobs
+          shell: bash
+
+        - name: Check Build Progress
+          id: build_monitor
+          run: |
+           echo "Check Build progress of buildcode : ${{ env.buildcode }}"
+           ccv2_build_url="${{env.CCV2_BASE_URL}}/builds";
+           while (true) 
+             do
+                echo "checkBuild buildcode : ${{ env.buildcode }}"
+                progress_ccv2_build_url="$ccv2_build_url/${{ env.buildcode }}/progress"
+                echo "URL: $progress_ccv2_build_url"
+                buildresponse=$(curl --location --request GET "$progress_ccv2_build_url" --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}")
+                buildStatus=$(jq -n "$buildresponse" | jq '.buildStatus')
+                percentage=$(jq -n "$buildresponse" | jq '.percentage')
+                echo "Check Progress Status: $buildStatus" 
+                if [ $buildStatus = '"SUCCESS"' ];then
+                  echo "Build Succeeded"
+                  finalBuildStatus="SUCCESS"
+                  break
+                elif [ $buildStatus  = '"FAIL"' ];then
+                  echo "Failed"
+                  finalBuildStatus="FAIL"
+                  exit 1
+                else
+                  echo "Build inProgress.. $percentage % completed" 
+                  sleep 120
+                fi
+             done
+             echo "Final Build Status: $finalBuildStatus"
+             echo "FINAL_BUILD_STATUS=$finalBuildStatus" >> $GITHUB_ENV
+             echo "::set-output name=finalBuildStatus::$finalBuildStatus"
+             echo "Build Completed"
+          shell: bash
+  
+  Deploy-build-branch:
+    runs-on: ubuntu-latest
+    needs: 
+      - code-compile-and-checks
+      - build-ccv2
+    env:
+        BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        BUILD_NAME: build.$(date +'%Y.%m.%d.%H.%M')
+        DATABASE_UPDATE_MODE: NONE #<If you have database change please make it UPDATE>
+        DEPLOYMENT_STRATEGY: ROLLING_UPDATE
+        ENVIRONMENT_CODE: d1 #<update your env code here.>
+        CCV2_URL: <Update your url>
+        ACCESS_TOKEN: <update your CCv2 portal login token from repository secrets>
+        SUB_CODE: <update your CCv2 portal subscription from repository secrets>
+        CCV2_BASE_URL: https://<URL>/v2/subscriptions/<SUB_CODE>
+    
+    steps:
+        - name: Deployment
+          id: deploy_code
+          run: |
+              #!/bin/bash
+              echo "URL: ${{env.CCV2_BASE_URL}}"
+              ccv2_deployment_url="${{env.CCV2_BASE_URL}}/deployments"
+              echo "Deployment URL: $ccv2_deployment_url"
+              echo "Branch name: ${{env.BRANCH_NAME}}"
+              echo "environmentCode: ${{env.ENVIRONMENT_CODE}}"
+              echo "databaseUpdateMode: ${{ env.DATABASE_UPDATE_MODE }}"
+              echo "strategy: ${{ env.DEPLOYMENT_STRATEGY }}"
+              echo "buildCode: $buildcode"
+              DepCode=`curl -X POST $ccv2_deployment_url -H "Authorization: Bearer ${{env.ACCESS_TOKEN}}" -H "Content-Type: application/json" -d '{"buildCode": ${{ needs.build-branch.outputs.build_code }},  "databaseUpdateMode": "${{ env.DATABASE_UPDATE_MODE }}",  "environmentCode": "${{ env.ENVIRONMENT_CODE }}",  "strategy": "${{ env.DEPLOYMENT_STRATEGY }}"}' | jq -r 'values.code'`
+              sleep 300
+              echo $DepCode
+              echo "DepCode=$DepCode" >> $GITHUB_ENV
+              echo "Create Deployment Response:  $DepCode"
+              echo "::set-output name=DepCode::$DepCode"
+
+        - name: Check Deployment Progress
+          id: monitor_deploy
+          run: |
+            echo "Check Deployment progress of deployment code : ${{ env.DepCode }}"
+            ccv2_deployment_url="${{env.CCV2_BASE_URL}}/deployments";
+            while (true) 
+              do
+                 echo "checkdeployment progress for code : ${{ env.DepCode }}"
+                 ccv2_deployment_progress_url="$ccv2_deployment_url/${{env.DepCode}}/progress"
+                 echo "URL: $progress_ccv2_deployment_url"
+                 deploymentresponse=$(curl --location --request GET "$ccv2_deployment_progress_url" --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}")
+                 deploymentStatus=$(jq -n "$deploymentresponse" | jq '.deploymentStatus')
+                 percentage=$(jq -n "$deploymentresponse" | jq '.percentage')
+                 echo "Check Progress Status: $deploymentStatus"
+                 if [ $deploymentStatus = '"DEPLOYED"' ];then
+                   echo "Deployment Succeeded" 
+                   finalDeployStatus="DEPLOYED"
+                   break
+                 elif [ $deploymentStatus  = '"FAIL"' ];then
+                   echo "Failed"
+                   finalDeployStatus="FAIL"
+                   exit 1
+                 else
+                   echo "Deployment inProgress.. $percentage % completed" 
+                   sleep 120
+                 fi
+              done
+              echo "Final Deploy Status: $finalDeployStatus"
+              echo "FINAL_DEPLOY_STATUS=$finalDeployStatus" >> $GITHUB_ENV
+              echo "::set-output name=finalDeployStatus::$finalDeployStatus"
+             echo "Deployment Completed"
+          shell: bash
+  performance-test:
+    runs-on: ubuntu-latest
+    needs: 
+      - Deploy-build-branch
+  steps:
+  - name: Run Unit Tests with Ant
+    run: |
+        # Run the `ant unittests` command with your specified parameters
+        curl -X GET http://localhost:9001/test/run/performance
+        #ant unittests -Dtestclasses.packages="org.training.*" -Dtestclasses.annotations="performancetest"
+  - name: Upload test results
+    uses: actions/upload-artifact@v2
+      with:
+        name: junit-test-results
+        path: ${{ github.workspace }}/hybris/log/junit/index.html  # Modify this path to match where your Ant test results are stored
