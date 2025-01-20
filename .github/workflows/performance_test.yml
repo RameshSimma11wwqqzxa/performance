@@ -297,4 +297,14 @@ jobs:
             path: ${{ github.workspace }}/hybris/bin/custom/response.xml
             reporter: java-junit
             fail-on-error: false
+            
   Pipeline-validation-and-Emailing:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Notify to users
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
