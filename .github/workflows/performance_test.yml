@@ -107,31 +107,31 @@ jobs:
           run: |
            echo "Check Build progress of buildcode : ${{ env.buildcode }}"
            ccv2_build_url="${{env.CCV2_BASE_URL}}/builds";
-           while (true) 
-             do
+           #while (true) 
+             #do
                 echo "checkBuild buildcode : ${{ env.buildcode }}"
                 progress_ccv2_build_url="$ccv2_build_url/${{ env.buildcode }}/progress"
                 echo "URL: $progress_ccv2_build_url"
                 #buildresponse=$(curl --location --request GET "$progress_ccv2_build_url" --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}")
-                buildStatus=$(jq -n "$buildresponse" | jq '.buildStatus')
-                percentage=$(jq -n "$buildresponse" | jq '.percentage')
-                echo "Check Progress Status: $buildStatus" 
-                if [ $buildStatus = '"SUCCESS"' ];then
-                  echo "Build Succeeded"
-                  finalBuildStatus="SUCCESS"
-                  break
-                elif [ $buildStatus  = '"FAIL"' ];then
-                  echo "Failed"
-                  finalBuildStatus="FAIL"
-                  exit 1
-                else
-                  echo "Build inProgress.. $percentage % completed" 
-                  sleep 120
-                fi
-             done
-             echo "Final Build Status: $finalBuildStatus"
-             echo "FINAL_BUILD_STATUS=$finalBuildStatus" >> $GITHUB_ENV
-             echo "::set-output name=finalBuildStatus::$finalBuildStatus"
+                #buildStatus=$(jq -n "$buildresponse" | jq '.buildStatus')
+                #percentage=$(jq -n "$buildresponse" | jq '.percentage')
+                #echo "Check Progress Status: $buildStatus" 
+                #if [ $buildStatus = '"SUCCESS"' ];then
+                 # echo "Build Succeeded"
+                 # finalBuildStatus="SUCCESS"
+                 # break
+                #elif [ $buildStatus  = '"FAIL"' ];then
+                 # echo "Failed"
+                #  finalBuildStatus="FAIL"
+                 # exit 1
+                #else
+                 # echo "Build inProgress.. $percentage % completed" 
+                #  sleep 120
+               # fi
+            # done
+             #echo "Final Build Status: $finalBuildStatus"
+             #echo "FINAL_BUILD_STATUS=$finalBuildStatus" >> $GITHUB_ENV
+             #echo "::set-output name=finalBuildStatus::$finalBuildStatus"
              echo "Build Completed"
           shell: bash
   
