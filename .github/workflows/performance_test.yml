@@ -35,9 +35,8 @@ jobs:
              # ant all
              
   Perform-Static-Code-quality:
-            
-        ## if you have multiple build command update in above step or create separate step for each command ###
- 
+        runs-on: ubuntu-24.04
+        steps:
         - name: Run Unit test
           run: |
             #  . ./setantenv.sh
