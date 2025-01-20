@@ -37,6 +37,11 @@ jobs:
   Perform-Static-Code-quality:
         runs-on: ubuntu-24.04
         steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+          with:
+              ref: ${{ env.BRANCH_NAME }}  # Ensure you are checking out the correct branch
+              clean: true
         - name: Run Unit test
           run: |
             #  . ./setantenv.sh
@@ -273,6 +278,11 @@ jobs:
   Keptn-Dynatrace-Quality-Gates:
     runs-on: ubuntu-latest
     steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+          with:
+              ref: ${{ env.BRANCH_NAME }}  # Ensure you are checking out the correct branch
+              clean: true
         - name: Check Host Metrics
           uses: dorny/test-reporter@v1
           with:
@@ -300,6 +310,11 @@ jobs:
   Pipeline-validation-and-Emailing:
     runs-on: ubuntu-latest
     steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+          with:
+              ref: ${{ env.BRANCH_NAME }}  # Ensure you are checking out the correct branch
+              clean: true
         - name: Notify to users
           uses: dorny/test-reporter@v1
           with:
