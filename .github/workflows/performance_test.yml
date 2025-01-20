@@ -271,8 +271,7 @@ jobs:
             path: ${{ github.workspace }}/hybris/bin/custom/response.xml
             reporter: java-junit
             fail-on-error: false
-            
- Keptn-Dynatrace-Quality-Gates:
+  Keptn-Dynatrace-Quality-Gates:
     runs-on: ubuntu-latest
     steps:
         - name: Check Host Metrics
