@@ -162,7 +162,7 @@ jobs:
               echo "strategy: ${{ env.DEPLOYMENT_STRATEGY }}"
               echo "buildCode: $buildcode"
               #DepCode=`curl -X POST $ccv2_deployment_url -H "Authorization: Bearer ${{env.ACCESS_TOKEN}}" -H "Content-Type: application/json" -d '{"buildCode": ${{ needs.build-branch.outputs.build_code }},  "databaseUpdateMode": "${{ env.DATABASE_UPDATE_MODE }}",  "environmentCode": "${{ env.ENVIRONMENT_CODE }}",  "strategy": "${{ env.DEPLOYMENT_STRATEGY }}"}' | jq -r 'values.code'`
-              sleep 300
+              #sleep 300
               echo $DepCode
               echo "DepCode=$DepCode" >> $GITHUB_ENV
               echo "Create Deployment Response:  $DepCode"
@@ -173,28 +173,28 @@ jobs:
           run: |
             echo "Check Deployment progress of deployment code : ${{ env.DepCode }}"
             ccv2_deployment_url="${{env.CCV2_BASE_URL}}/deployments";
-            while (true) 
-              do
-                 echo "checkdeployment progress for code : ${{ env.DepCode }}"
-                 ccv2_deployment_progress_url="$ccv2_deployment_url/${{env.DepCode}}/progress"
-                 echo "URL: $progress_ccv2_deployment_url"
-                 deploymentresponse=$(curl --location --request GET "$ccv2_deployment_progress_url" --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}")
+            #while (true) 
+              #do
+               #  echo "checkdeployment progress for code : ${{ env.DepCode }}"
+               #  ccv2_deployment_progress_url="$ccv2_deployment_url/${{env.DepCode}}/progress"
+                # echo "URL: $progress_ccv2_deployment_url"
+                # deploymentresponse=$(curl --location --request GET "$ccv2_deployment_progress_url" --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}")
                 # deploymentStatus=$(jq -n "$deploymentresponse" | jq '.deploymentStatus')
-                 percentage=$(jq -n "$deploymentresponse" | jq '.percentage')
-                 echo "Check Progress Status: $deploymentStatus"
-                 if [ $deploymentStatus = '"DEPLOYED"' ];then
-                   echo "Deployment Succeeded" 
-                   finalDeployStatus="DEPLOYED"
-                   break
-                 elif [ $deploymentStatus  = '"FAIL"' ];then
-                   echo "Failed"
-                   finalDeployStatus="FAIL"
-                   exit 1
-                 else
-                   echo "Deployment inProgress.. $percentage % completed" 
-                   sleep 120
-                 fi
-              done
+                # percentage=$(jq -n "$deploymentresponse" | jq '.percentage')
+                # echo "Check Progress Status: $deploymentStatus"
+                # if [ $deploymentStatus = '"DEPLOYED"' ];then
+                #   echo "Deployment Succeeded" 
+                #   finalDeployStatus="DEPLOYED"
+                #   break
+                # elif [ $deploymentStatus  = '"FAIL"' ];then
+                 #  echo "Failed"
+                #   finalDeployStatus="FAIL"
+                #   exit 1
+                # else
+                #   echo "Deployment inProgress.. $percentage % completed" 
+                 #  sleep 120
+                # fi
+              #done
               echo "Final Deploy Status: $finalDeployStatus"
               echo "FINAL_DEPLOY_STATUS=$finalDeployStatus" >> $GITHUB_ENV
               echo "::set-output name=finalDeployStatus::$finalDeployStatus"
