@@ -12,7 +12,7 @@ permissions:
   checks: write
  
 jobs:
-  code-compile-and-checks:
+  Start-build-in-GitHub-Runner:
         runs-on: ubuntu-24.04
         env:
             BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
@@ -33,15 +33,18 @@ jobs:
           run: |
              # . ./setantenv.sh
              # ant all
+             
+  Perform-Static-Code-quality:
             
         ## if you have multiple build command update in above step or create separate step for each command ###
  
-        - name: JUnit test
+        - name: Run Unit test
           run: |
             #  . ./setantenv.sh
+            #  ant jacoco_alltests
             #  ant alltests -Dtestclasses.annotations=unittests
 
-        - name: JUnite Test Report
+        - name: Junit Code Coverage
           uses: dorny/test-reporter@v1
           if: always()
           with:
@@ -49,6 +52,23 @@ jobs:
              path: ${{ github.workspace }}/hybris/bin/custom/response.xml
              reporter: java-junit
              fail-on-error: false
+             
+        - name: get Jacoco report (check if platform is available or not )
+          run:  ant jacoco_report_ci
+          
+        - name: Generate Jacoco code coverage XML report
+          run: java -jar jacococli.jar report jacoco.exec --classfiles  <ClassFIle Path> --xml  jacoco.xml
+          
+        - name: Run SONAR Quality Check (check if platform is available or not )
+          run: |
+             . ./setantenv.sh
+             ant sonarcheck
+             
+        - name: SAST Test
+          run: |
+            #  . ./setantenv.sh
+            #  ant jacoco_alltests
+            #  ant alltests -Dtestclasses.annotations=unittests
 
         - name: Set Job Status
           id: set_status
@@ -63,7 +83,7 @@ jobs:
             fi
           shell: bash
 
-  build-ccv2:
+  Perform-CCV2-build-and-Deploy:
     runs-on: ubuntu-latest
     env:
         BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
@@ -72,6 +92,9 @@ jobs:
         ACCESS_TOKEN: <update your CCv2 portal login token from repository secrets>
         SUB_CODE: <update your CCv2 portal subscription from repository secrets>
         CCV2_BASE_URL: https://<URL>/v2/subscriptions/<SUB_CODE>
+        DATABASE_UPDATE_MODE: NONE #<If you have database change please make it UPDATE>
+        DEPLOYMENT_STRATEGY: ROLLING_UPDATE
+        ENVIRONMENT_CODE: d1 #<update your env code here.>
 
     steps:
         - name: Create Build
@@ -134,21 +157,7 @@ jobs:
              #echo "::set-output name=finalBuildStatus::$finalBuildStatus"
              echo "Build Completed"
           shell: bash
-  
-  Deploy-build-branch:
-    runs-on: ubuntu-latest
-    env:
-        BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-        BUILD_NAME: build.$(date +'%Y.%m.%d.%H.%M')
-        DATABASE_UPDATE_MODE: NONE #<If you have database change please make it UPDATE>
-        DEPLOYMENT_STRATEGY: ROLLING_UPDATE
-        ENVIRONMENT_CODE: d1 #<update your env code here.>
-        CCV2_URL: <Update your url>
-        ACCESS_TOKEN: <update your CCv2 portal login token from repository secrets>
-        SUB_CODE: <update your CCv2 portal subscription from repository secrets>
-        CCV2_BASE_URL: https://<URL>/v2/subscriptions/<SUB_CODE>
-    
-    steps:
+          
         - name: Deployment
           id: deploy_code
           run: |
@@ -200,7 +209,8 @@ jobs:
               echo "::set-output name=finalDeployStatus::$finalDeployStatus"
              echo "Deployment Completed"
           shell: bash
-  performance-test:
+          
+  Perform-Post-deployment-tests:
     runs-on: ubuntu-latest
     steps:
         - name: Checkout code
@@ -212,7 +222,7 @@ jobs:
         - name: Install xmlstarlet
           run: sudo apt-get update && sudo apt-get install -y xmlstarlet
     
-        - name: performance test validation
+        - name: @Performance Test
           id: test_case_status
           run: |
             #!/bin/bash
@@ -230,10 +240,63 @@ jobs:
             echo "Test Status: $test_duration"
             echo "TEST_DURATION=$test_duration" >> $GITHUB_ENV
       
-        - name: JUnite Test Report
+        - name: Performance Test Report
           uses: dorny/test-reporter@v1
           with:
             name: junit-test-results
             path: ${{ github.workspace }}/hybris/bin/custom/response.xml
             reporter: java-junit
             fail-on-error: false
+            
+        - name: Smoke Test
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
+            
+        - name: QA Automation Test
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
+            
+        - name: DAST Test
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
+            
+ Keptn-Dynatrace-Quality-Gates:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Check Host Metrics
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
+            
+        - name: Check Errors
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
+            
+        - name: Check response time
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
+            
+ Pipeline-validation-and-Emailing:
