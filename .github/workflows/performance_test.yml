@@ -222,7 +222,7 @@ jobs:
         - name: Install xmlstarlet
           run: sudo apt-get update && sudo apt-get install -y xmlstarlet
     
-        - name: @Performance Test
+        - name: Performance Test
           id: test_case_status
           run: |
             #!/bin/bash
