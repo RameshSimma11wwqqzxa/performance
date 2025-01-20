@@ -297,5 +297,4 @@ jobs:
             path: ${{ github.workspace }}/hybris/bin/custom/response.xml
             reporter: java-junit
             fail-on-error: false
-            
- Pipeline-validation-and-Emailing:
+  Pipeline-validation-and-Emailing:
