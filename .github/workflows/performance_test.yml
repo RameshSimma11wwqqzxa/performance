@@ -31,22 +31,22 @@ jobs:
 
         - name: Build or compile code
           run: |
-              #. ./setantenv.sh
-              #ant all
+              . ./setantenv.sh
+              ant all
             
         ## if you have multiple build command update in above step or create separate step for each command ###
  
         - name: JUnit test
           run: |
-             # . ./setantenv.sh
-             # ant alltests -Dtestclasses.annotations=unittests
+              . ./setantenv.sh
+              ant alltests -Dtestclasses.annotations=unittests
 
         - name: JUnite Test Report
           uses: dorny/test-reporter@v1
           if: always()
           with:
              name: JUnit Tests
-             path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+             path: ${{ github.workspace }}/hybris/log/junit/index.html
              reporter: java-junit
              fail-on-error: false
 
@@ -83,23 +83,23 @@ jobs:
             ccv2_build_url="${{env.CCV2_BASE_URL}}/builds";
             payload='{"branch": "${{ env.BRANCH_NAME}}", "name": "'"${{ env.BUILD_NAME }}"'"}';
             echo "Payload :: $payload"
-            #buildcode=$(curl --location --request POST "$ccv2_build_url" --header 'Content-Type: application/json' --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}" --data-raw "$payload" | jq '.code')
+            buildcode=$(curl --location --request POST "$ccv2_build_url" --header 'Content-Type: application/json' --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}" --data-raw "$payload" | jq '.code')
             echo "buildcode=$buildcode" >> $GITHUB_ENV
-            #sleep 300
+            sleep 300
             echo "Create Build Response:  $buildcode"
             ##########
-             #if [ "$buildcode" = "null" ] || [ -z "$buildcode" ]; then
-               #echo "Build creation failed!"
-               #finalStatus="FAIL"
-               #echo "FINAL_BUILD_STATUS=$finalStatus" >> $GITHUB_ENV
-               #exit 1 # Fail the workflow, but the next step can still run if you want it to.
-             #else
-               #echo "buildcode=$buildcode" >> $GITHUB_ENV
-               #finalStatus="IN_PROGRESS"
-               #echo "FINAL_BUILD_STATUS=$finalStatus" >> $GITHUB_ENV
-             #fi
+            if [ "$buildcode" == "null" ] || [ -z "$buildcode" ]; then
+              echo "Build creation failed!"
+              finalStatus="FAIL"
+              echo "FINAL_BUILD_STATUS=$finalStatus" >> $GITHUB_ENV
+              exit 1 # Fail the workflow, but the next step can still run if you want it to.
+            else
+              echo "buildcode=$buildcode" >> $GITHUB_ENV
+              finalStatus="IN_PROGRESS"
+              echo "FINAL_BUILD_STATUS=$finalStatus" >> $GITHUB_ENV
+            fi
             ##########
-             #echo "::set-output name=buildcode::$buildcode" # Set the buildCode as an output for other jobs
+            echo "::set-output name=buildcode::$buildcode" # Set the buildCode as an output for other jobs
           shell: bash
 
         - name: Check Build Progress
@@ -112,22 +112,22 @@ jobs:
                 echo "checkBuild buildcode : ${{ env.buildcode }}"
                 progress_ccv2_build_url="$ccv2_build_url/${{ env.buildcode }}/progress"
                 echo "URL: $progress_ccv2_build_url"
-              #  buildresponse=$(curl --location --request GET "$progress_ccv2_build_url" --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}")
+                buildresponse=$(curl --location --request GET "$progress_ccv2_build_url" --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}")
                 buildStatus=$(jq -n "$buildresponse" | jq '.buildStatus')
                 percentage=$(jq -n "$buildresponse" | jq '.percentage')
                 echo "Check Progress Status: $buildStatus" 
-               # if [ $buildStatus = '"SUCCESS"' ];then
-                #  echo "Build Succeeded"
-                #  finalBuildStatus="SUCCESS"
-                 # break
-                #elif [ $buildStatus  = '"FAIL"' ];then
-                 # echo "Failed"
-                  #finalBuildStatus="FAIL"
-                  #exit 1
-                #else
-                 # echo "Build inProgress.. $percentage % completed" 
-                  #sleep 120
-                #fi
+                if [ $buildStatus = '"SUCCESS"' ];then
+                  echo "Build Succeeded"
+                  finalBuildStatus="SUCCESS"
+                  break
+                elif [ $buildStatus  = '"FAIL"' ];then
+                  echo "Failed"
+                  finalBuildStatus="FAIL"
+                  exit 1
+                else
+                  echo "Build inProgress.. $percentage % completed" 
+                  sleep 120
+                fi
              done
              echo "Final Build Status: $finalBuildStatus"
              echo "FINAL_BUILD_STATUS=$finalBuildStatus" >> $GITHUB_ENV
