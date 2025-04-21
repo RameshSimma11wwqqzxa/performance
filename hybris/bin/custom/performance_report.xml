@@ -1,0 +1,45 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>hybris testweb console | Test execution failed</title>
+    <link rel="stylesheet" href="/test/static/css/blueprint/screen.css" type="text/css"
+          media="screen, projection"/>
+    <link rel="stylesheet" href="/test/static/css/blueprint/print.css" type="text/css"
+          media="screen, projection"/>
+    <link rel="stylesheet" href="/test/static/css/blueprint/ie.css" type="text/css"
+          media="screen, projection"/>
+    <link rel="stylesheet" href="/test/static/css/jquery-ui/jquery-ui.min.css" type="text/css"
+          media="screen, projection"/>
+    <link rel="stylesheet" href="/test/static/css/table.css" type="text/css" media="screen, projection"/>
+    <link rel="stylesheet" href="/test/static/css/main.css" type="text/css" media="screen, projection"/>
+    <link rel="stylesheet" href="/test/static/css/style.css" type="text/css" media="screen, projection"/>
+
+    <script type="text/javascript" src="/test/static/js/jquery-3.5.1.min.js"></script>
+    <script type="text/javascript" src="/test/static/js/jquery-ui/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="/test/static/js/ba-debug.min.js"></script>
+    <script type="text/javascript" src="/test/static/js/main.js"></script>
+    <script type="text/javascript" src="/test/static/js/jquery.dataTables.min.js"></script>
+    
+	
+
+</head>
+<body>
+<div id="mainContainer" class="container" data-expandIconUrl="/test/static/img/expand-small-silver.png"
+     data-collapseIconUrl="/test/static/img/collapse-small-silver.png">
+    
+<div class="prepend-top span-24" id="content">
+	<h1>We're sorry but test execution has failed</h1>
+
+	<div>
+		Test class org.training.core.actions.quote.MarkQuoteNotificationAsSentActionTestCorg.training.core.job.QuoteExpiredJobPerformableTestCorg.training.core.suggestion.impl.DefaultSimpleSuggestionServiceTest not found
+	</div>
+</div>
+
+</div>
+<footer>
+    &copy; hybris AG, 2015
+</footer>
+</body>
+</html>
