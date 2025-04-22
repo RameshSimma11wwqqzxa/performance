@@ -6,24 +6,72 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
+  actions: write
+  issues: write
+  checks: write
  
 jobs:
-  code-compile-and-checks:
-        runs-on: ubuntu-latest
+  Start-build-in-GitHub-Runner:
+        runs-on: ubuntu-24.04
         env:
             BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         
         steps:
-        - name: JUnite Test Report
+        - uses: actions/setup-java@v4
+          with:
+            distribution: 'sapmachine' # See 'Supported distributions' for available options
+            java-version: '17'
+
+        - name: Checkout code
+          uses: actions/checkout@v3
+          with:
+              ref: ${{ env.BRANCH_NAME }}  # Ensure you are checking out the correct branch
+              clean: true
+
+        - name: Build or compile code
+          run: |
+             # . ./setantenv.sh
+             # ant all
+             
+  Perform-Static-Code-quality:
+        runs-on: ubuntu-24.04
+        steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+          with:
+              ref: ${{ env.BRANCH_NAME }}  # Ensure you are checking out the correct branch
+              clean: true
+        - name: Run Unit test
+          run: |
+            #  . ./setantenv.sh
+            #  ant jacoco_alltests
+            #  ant alltests -Dtestclasses.annotations=unittests
+        - name: Junit Code Coverage
           uses: dorny/test-reporter@v1
           if: always()
           with:
              name: JUnit Tests
-             path: path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+             path: ${{ github.workspace }}/hybris/bin/custom/response.xml
              reporter: java-junit
              fail-on-error: false
-
+             
+       # - name: get Jacoco report (check if platform is available or not )
+        #  run:  ant jacoco_report_ci
+          
+        #- name: Generate Jacoco code coverage XML report
+         # run: java -jar jacococli.jar report jacoco.exec --classfiles  <ClassFIle Path> --xml  jacoco.xml
+          
+        - name: Run SONAR Quality Check (check if platform is available or not )
+          run: |
+            # . ./setantenv.sh
+            # ant sonarcheck
+             
+        - name: SAST Test
+          run: |
+            #  . ./setantenv.sh
+            #  ant jacoco_alltests
+            #  ant alltests -Dtestclasses.annotations=unittests
         - name: Set Job Status
           id: set_status
           if: always()  # Ensure this step always runs
@@ -36,3 +84,238 @@ jobs:
               echo "::set-output name=job_status::FAIL"
             fi
           shell: bash
+
+  Perform-CCV2-build-and-Deploy:
+    runs-on: ubuntu-latest
+    env:
+        BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        BUILD_NAME: build_${{ github.run_number }}-$(date +'%Y.%m.%d.%H.%M') 
+        CCV2_URL: <Update your url>
+        ACCESS_TOKEN: <update your CCv2 portal login token from repository secrets>
+        SUB_CODE: <update your CCv2 portal subscription from repository secrets>
+        CCV2_BASE_URL: https://<URL>/v2/subscriptions/<SUB_CODE>
+        DATABASE_UPDATE_MODE: NONE #<If you have database change please make it UPDATE>
+        DEPLOYMENT_STRATEGY: ROLLING_UPDATE
+        ENVIRONMENT_CODE: d1 #<update your env code here.>
+
+    steps:
+        - name: Create Build
+          id: get_build_code
+          run: |
+            #!/bin/bash
+            echo "URL: ${{env.CCV2_BASE_URL}}"
+            echo "BUILD_NAME : ${{ env.BUILD_NAME }}"
+            ccv2_build_url="${{env.CCV2_BASE_URL}}/builds";
+            payload='{"branch": "${{ env.BRANCH_NAME}}", "name": "'"${{ env.BUILD_NAME }}"'"}';
+            echo "Payload :: $payload"
+            #buildcode=$(curl --location --request POST "$ccv2_build_url" --header 'Content-Type: application/json' --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}" --data-raw "$payload" | jq '.code')
+            echo "buildcode=$buildcode" >> $GITHUB_ENV
+            #sleep 300
+            echo "Create Build Response:  $buildcode"
+            ##########
+            #if [ "$buildcode" == "null" ] || [ -z "$buildcode" ]; then
+            #  echo "Build creation failed!"
+            #  finalStatus="FAIL"
+            #  echo "FINAL_BUILD_STATUS=$finalStatus" >> $GITHUB_ENV
+            #  exit 1 # Fail the workflow, but the next step can still run if you want it to.
+            #else
+            #  echo "buildcode=$buildcode" >> $GITHUB_ENV
+            #  finalStatus="IN_PROGRESS"
+            #  echo "FINAL_BUILD_STATUS=$finalStatus" >> $GITHUB_ENV
+            #fi
+            ##########
+            echo "::set-output name=buildcode::$buildcode" # Set the buildCode as an output for other jobs
+          shell: bash
+
+        - name: Check Build Progress
+          id: build_monitor
+          run: |
+           echo "Check Build progress of buildcode : ${{ env.buildcode }}"
+           ccv2_build_url="${{env.CCV2_BASE_URL}}/builds";
+           #while (true) 
+             #do
+                echo "checkBuild buildcode : ${{ env.buildcode }}"
+                progress_ccv2_build_url="$ccv2_build_url/${{ env.buildcode }}/progress"
+                echo "URL: $progress_ccv2_build_url"
+                #buildresponse=$(curl --location --request GET "$progress_ccv2_build_url" --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}")
+                #buildStatus=$(jq -n "$buildresponse" | jq '.buildStatus')
+                #percentage=$(jq -n "$buildresponse" | jq '.percentage')
+                #echo "Check Progress Status: $buildStatus" 
+                #if [ $buildStatus = '"SUCCESS"' ];then
+                 # echo "Build Succeeded"
+                 # finalBuildStatus="SUCCESS"
+                 # break
+                #elif [ $buildStatus  = '"FAIL"' ];then
+                 # echo "Failed"
+                #  finalBuildStatus="FAIL"
+                 # exit 1
+                #else
+                 # echo "Build inProgress.. $percentage % completed" 
+                #  sleep 120
+               # fi
+            # done
+             #echo "Final Build Status: $finalBuildStatus"
+             #echo "FINAL_BUILD_STATUS=$finalBuildStatus" >> $GITHUB_ENV
+             #echo "::set-output name=finalBuildStatus::$finalBuildStatus"
+             echo "Build Completed"
+          shell: bash
+          
+        - name: Deployment
+          id: deploy_code
+          run: |
+              #!/bin/bash
+              echo "URL: ${{env.CCV2_BASE_URL}}"
+              ccv2_deployment_url="${{env.CCV2_BASE_URL}}/deployments"
+              echo "Deployment URL: $ccv2_deployment_url"
+              echo "Branch name: ${{env.BRANCH_NAME}}"
+              echo "environmentCode: ${{env.ENVIRONMENT_CODE}}"
+              echo "databaseUpdateMode: ${{ env.DATABASE_UPDATE_MODE }}"
+              echo "strategy: ${{ env.DEPLOYMENT_STRATEGY }}"
+              echo "buildCode: $buildcode"
+              #DepCode=`curl -X POST $ccv2_deployment_url -H "Authorization: Bearer ${{env.ACCESS_TOKEN}}" -H "Content-Type: application/json" -d '{"buildCode": ${{ needs.build-branch.outputs.build_code }},  "databaseUpdateMode": "${{ env.DATABASE_UPDATE_MODE }}",  "environmentCode": "${{ env.ENVIRONMENT_CODE }}",  "strategy": "${{ env.DEPLOYMENT_STRATEGY }}"}' | jq -r 'values.code'`
+              #sleep 300
+              echo $DepCode
+              echo "DepCode=$DepCode" >> $GITHUB_ENV
+              echo "Create Deployment Response:  $DepCode"
+              echo "::set-output name=DepCode::$DepCode"
+        - name: Check Deployment Progress
+          id: monitor_deploy
+          run: |
+            echo "Check Deployment progress of deployment code : ${{ env.DepCode }}"
+            ccv2_deployment_url="${{env.CCV2_BASE_URL}}/deployments";
+            #while (true) 
+              #do
+               #  echo "checkdeployment progress for code : ${{ env.DepCode }}"
+               #  ccv2_deployment_progress_url="$ccv2_deployment_url/${{env.DepCode}}/progress"
+                # echo "URL: $progress_ccv2_deployment_url"
+                # deploymentresponse=$(curl --location --request GET "$ccv2_deployment_progress_url" --header "Authorization: Bearer ${{env.ACCESS_TOKEN}}")
+                # deploymentStatus=$(jq -n "$deploymentresponse" | jq '.deploymentStatus')
+                # percentage=$(jq -n "$deploymentresponse" | jq '.percentage')
+                # echo "Check Progress Status: $deploymentStatus"
+                # if [ $deploymentStatus = '"DEPLOYED"' ];then
+                #   echo "Deployment Succeeded" 
+                #   finalDeployStatus="DEPLOYED"
+                #   break
+                # elif [ $deploymentStatus  = '"FAIL"' ];then
+                 #  echo "Failed"
+                #   finalDeployStatus="FAIL"
+                #   exit 1
+                # else
+                #   echo "Deployment inProgress.. $percentage % completed" 
+                 #  sleep 120
+                # fi
+              #done
+              echo "Final Deploy Status: $finalDeployStatus"
+              echo "FINAL_DEPLOY_STATUS=$finalDeployStatus" >> $GITHUB_ENV
+              echo "::set-output name=finalDeployStatus::$finalDeployStatus"
+             echo "Deployment Completed"
+          shell: bash
+          
+  Perform-Post-deployment-tests:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+          with:
+              ref: ${{ env.BRANCH_NAME }}  # Ensure you are checking out the correct branch
+              clean: true
+              
+        - name: Install xmlstarlet
+          run: sudo apt-get update && sudo apt-get install -y xmlstarlet
+    
+        - name: Performance Test
+          id: test_case_status
+          run: |
+            #!/bin/bash
+            # Parse the JUnit XML and check each test case duration
+            xmlstarlet sel -t -m "//testsuite/testcase" -v "@name" -o " took " -v "@time" -n ${{ github.workspace }}/hybris/bin/custom/response.xml | while read line; do
+              test_name=$(echo $line | cut -d' ' -f1)
+              test_duration=$(echo $line | cut -d' ' -f3)
+              # Check if any test took more than 20000 seconds
+              if (( $(echo "$test_duration > 20000" | bc -l) )); then
+                echo "Test case '$test_name' took ${test_duration} seconds, which is more than the 20-second limit."
+                exit 1
+                echo "test_duration=false" >> $GITHUB_ENV
+              fi
+            done
+            echo "Test Status: $test_duration"
+            echo "TEST_DURATION=$test_duration" >> $GITHUB_ENV
+      
+        - name: Performance Test Report
+          uses: dorny/test-reporter@v1
+          with:
+            name: Performance-Metrics
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
+            
+        - name: Smoke Test
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
+            
+        - name: QA Automation Test
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
+            
+        - name: DAST Test
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
+  Keptn-Dynatrace-Quality-Gates:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+          with:
+              ref: ${{ env.BRANCH_NAME }}  # Ensure you are checking out the correct branch
+              clean: true
+        - name: Check Host Metrics
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
+            
+        - name: Check Errors
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
+            
+        - name: Check response time
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
+            
+  Pipeline-validation-and-Emailing:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+          with:
+              ref: ${{ env.BRANCH_NAME }}  # Ensure you are checking out the correct branch
+              clean: true
+        - name: Notify to users
+          uses: dorny/test-reporter@v1
+          with:
+            name: junit-test-results
+            path: ${{ github.workspace }}/hybris/bin/custom/response.xml
+            reporter: java-junit
+            fail-on-error: false
